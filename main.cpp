@@ -192,7 +192,7 @@ void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const 
 	points[3] = Add(center, Add(Multiply(-extent, u), Multiply(extent, v)));
 
 	// 各頂点をビューポート座標に変換
-	for (int32_t i = 0; i < 4; ++i) {
+	for (int32_t i = 0; i < 4; ++i) {　
 		points[i] = Transform(Transform(points[i], viewProjectionMatrix), viewportMatrix);
 	}
 
