@@ -170,7 +170,7 @@ Vector3 Perpendicular(const Vector3& vector)
 {
 	if (vector.x != 0.0f || vector.z != 0.0f)
 	{
-		return { -vector.z, 0.0f, vector.x }; // y軸以外の成分を使用
+		return { -vector.y,  vector.x ,0.0f };
 	}
 	return { 0.0f, -vector.z, vector.y }; // y軸のみの場合
 }
@@ -179,29 +179,25 @@ Vector3 Perpendicular(const Vector3& vector)
 void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix, uint32_t color)
 {
 	Vector3 center = Multiply(plane.distance, plane.normal);
-
-	Vector3 u = Normalize(Perpendicular(plane.normal));
-	Vector3 v = Cross(plane.normal, u);
+	Vector3 perpendiculars[4];
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));
+	perpendiculars[1] = { -perpendiculars[0].x,-perpendiculars[0].y,-perpendiculars[0].z };
+	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);
+	perpendiculars[3] = { -perpendiculars[2].x,-perpendiculars[2].y,-perpendiculars[2].z };
 
 	// 平面の四隅を計算
-	float extent = 10.0f; // 平面の描画範囲を設定 (適切な値に調整)
 	Vector3 points[4];
-	points[0] = Add(center, Add(Multiply(extent, u), Multiply(extent, v)));
-	points[1] = Add(center, Add(Multiply(extent, u), Multiply(-extent, v)));
-	points[2] = Add(center, Add(Multiply(-extent, u), Multiply(-extent, v)));
-	points[3] = Add(center, Add(Multiply(-extent, u), Multiply(extent, v)));
-
-	// 各頂点をビューポート座標に変換
-	for (int32_t i = 0; i < 4; ++i) {　
-		points[i] = Transform(Transform(points[i], viewProjectionMatrix), viewportMatrix);
+	for (int32_t index = 0; index < 4; index++)
+	{
+		Vector3 extend = Multiply(2.0f, perpendiculars[index]);
+		Vector3 point = Add(center, extend);
+		points[index] = Transform(Transform(point, viewProjectionMatrix), viewportMatrix);
 	}
 
-	// 平面を描画
-	for (int32_t i = 0; i < 4; ++i) {
-		Vector3 p1 = points[i];
-		Vector3 p2 = points[(i + 1) % 4];
-		Novice::DrawLine((int)p1.x, (int)p1.y, (int)p2.x, (int)p2.y, color);
-	}
+	Novice::DrawLine((int)points[0].x, (int)points[0].y, (int)points[2].x, (int)points[2].y, color);
+	Novice::DrawLine((int)points[1].x, (int)points[1].y, (int)points[3].x, (int)points[3].y, color);
+	Novice::DrawLine((int)points[2].x, (int)points[2].y, (int)points[1].x, (int)points[1].y, color);
+	Novice::DrawLine((int)points[3].x, (int)points[3].y, (int)points[0].x, (int)points[0].y, color);
 }
 
 const char kWindowTitle[] = "LE2B_09_キクチ_ケンタ_提出用課題";
@@ -263,11 +259,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 		//各種行列の計算
 		Matrix4x4 worldMatrix = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, rotate, translate);
-		Matrix4x4 viewWorldMatrix = Inverse(worldMatrix);
-
-		//カメラの行列を作成
 		Matrix4x4 cameraMatrxi = MakeAffineMatrix({ 1.0f,1.0f,1.0f }, cameraRotate, camaraTranslate);
-		//カメラのビュー行列
+		Matrix4x4 viewWorldMatrix = Inverse(worldMatrix);
 		Matrix4x4 viewCameraMatrix = Inverse(cameraMatrxi);
 
 		// 透視投影行列を作成
@@ -293,6 +286,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		ImGui::DragFloat("SphereRadius1", &sphere1.radius, 0.01f);
 		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
 		ImGui::DragFloat("Plane.Distance", &plane.distance, 0.01f);
+		plane.normal = Normalize(plane.normal);
 		ImGui::End();
 
 		///
@@ -314,7 +308,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//uint32_t sphere1Color = collisionSpherePlane ? RED : WHITE;
 
 		DrawSphere(sphere1, ViewProjectionMatrix, ViewportMatrix, spherePlaneColor);
-		DrawPlane(plane, ViewProjectionMatrix, ViewportMatrix, 0x6F6F6FFF);
+		DrawPlane(plane, ViewProjectionMatrix, ViewportMatrix, WHITE);
 		Novice::DrawLine((int)start.x, (int)start.y, (int)end.x, (int)end.y, 0x00000000);
 
 		///
